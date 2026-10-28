@@ -176,6 +176,43 @@ function rebootFirmware(input) {
 	return submitFirmwareForm(input);
 }
 
+// After a reboot request the device answers this page, then drops off the network while it
+// restarts. Probe a small static file until it has gone away and answers again, then load the
+// firmware page fresh (a GET, so nothing is resubmitted; an expired session shows the login).
+function waitForReboot(panel) {
+	function ms(name, fallback) {
+		var value = Number(panel.dataset[name]);
+		return isFinite(value) && value >= 0 ? value : fallback;
+	}
+	var started = Date.now(), wentDown = false, text = panel.querySelector('p');
+	var interval = ms('interval', 3000), assumeDown = ms('assumeDown', 90000), giveUp = ms('giveUp', 300000);
+	function probe() {
+		var controller = window.AbortController ? new AbortController() : null;
+		var timer = controller && setTimeout(function () { controller.abort(); }, interval + 1000);
+		fetch(panel.dataset.probe + '?reboot=' + Date.now(), { cache: 'no-store', credentials: 'same-origin',
+			signal: controller ? controller.signal : undefined }).then(function (response) {
+			return response.ok;
+		}, function () { return false; }).then(function (up) {
+			if (timer) clearTimeout(timer);
+			var elapsed = Date.now() - started;
+			if (!up) wentDown = true;
+			// A reply only counts once the device has gone away, or after long enough that a
+			// short outage between two probes must have been missed.
+			if (up && (wentDown || elapsed >= assumeDown)) {
+				text.textContent = panel.dataset.back;
+				window.location.replace(panel.dataset.return);
+				return;
+			}
+			if (elapsed >= giveUp) {
+				text.textContent = panel.dataset.slow;
+				return;
+			}
+			setTimeout(probe, interval);
+		});
+	}
+	setTimeout(probe, ms('delay', 5000));
+}
+
 function confirmCurrentFirmware(input) {
 	$('#firmware-file').prop('disabled', true);
 	$('#firmware-action').val('commit');
@@ -393,6 +430,8 @@ function resetSettings(input) {
 }
 
 $(document).ready(function () {
+	var rebootWait = document.getElementById('firmware-reboot-wait');
+	if (rebootWait) waitForReboot(rebootWait);
 	var diagnostics = document.getElementById('connection-diagnostics');
 	if (diagnostics) startConnectionDiagnostics(diagnostics);
 	var configForm = document.getElementById('8311-config');

@@ -34,6 +34,13 @@ ${name === 'empty' ? '<button class="firmware-button" type="button" disabled onc
 }
 
 let diagnosticRequests = 0, failDiagnostics = false, holdDiagnostics = false;
+// Reboot probes answer from a script: 'up' serves the file, 'down' fails.
+let probePlan = [], probes = 0;
+function rebootPage(timings) {
+  return `<!doctype html><meta charset="utf-8"><form id="firmware-form">
+<div id="firmware-reboot-wait" data-probe="/probe" data-return="/flash-page" data-back="Back online" data-slow="Not back yet"
+${Object.entries(timings).map(([key, value]) => 'data-' + key + '="' + value + '"').join(' ')}><p>Rebooting</p></div></form>${scripts}`;
+}
 const heldDiagnostics = [];
 const submissions = [];
 const diagnosticOptions = [];
@@ -70,6 +77,19 @@ const server = http.createServer(async (req, res) => {
       res.end(slow ? 'old response' : 'current response');
     };
     if (slow) setTimeout(respond, 300); else respond();
+  } else if (url === '/probe') {
+    const state = probePlan[Math.min(probes, probePlan.length - 1)];
+    probes++;
+    // Browsers silently retry a dropped keep-alive request, so report the outage as an error status.
+    if (state === 'down') { res.writeHead(503).end(); return; }
+    res.setHeader('Content-Type','text/css'); res.end('/* fixture */');
+  } else if (url === '/flash-page') {
+    res.setHeader('Content-Type','text/html'); res.end('<!doctype html><title>Firmware page</title>');
+  } else if (url.startsWith('/reboot-page/')) {
+    const timings = { '/reboot-page/normal': { delay: 0, interval: 40, 'assume-down': 60000, 'give-up': 60000 },
+      '/reboot-page/missed': { delay: 0, interval: 40, 'assume-down': 300, 'give-up': 60000 },
+      '/reboot-page/stuck': { delay: 0, interval: 40, 'assume-down': 60000, 'give-up': 300 } }[url];
+    res.setHeader('Content-Type','text/html'); res.end(rebootPage(timings));
   } else if (url === '/text-page') {
     res.setHeader('Content-Type','text/html');
     res.end(`<!doctype html><meta charset="utf-8"><ul>
@@ -225,6 +245,27 @@ const server = http.createServer(async (req, res) => {
     await page.screenshot({path:output,fullPage:true});
     assert.deepEqual(errors,[]);
     console.log('ok - diagnostics stay within a narrow viewport with horizontally scrollable tables');
+
+    // Still answering before the restart must not count as "back"; only an answer after the drop does.
+    probePlan = ['up', 'up', 'down', 'down', 'up']; probes = 0;
+    await page.goto(base + '/reboot-page/normal');
+    await page.waitForURL(base + '/flash-page');
+    assert.equal(probes, 5, 'reloaded before the device went down and came back');
+    // A drop that fell between two probes is assumed after the configured time.
+    probePlan = ['up']; probes = 0;
+    await page.goto(base + '/reboot-page/missed');
+    await page.waitForURL(base + '/flash-page');
+    assert(probes >= 2, 'reloaded on the first answer without waiting for the assumed outage');
+    // A device that never returns keeps the page and says so instead of reloading into an error.
+    probePlan = ['down']; probes = 0;
+    await page.goto(base + '/reboot-page/stuck');
+    await page.locator('#firmware-reboot-wait p').filter({hasText:'Not back yet'}).waitFor();
+    const probesAtGiveUp = probes;
+    await page.waitForTimeout(200);
+    assert.equal(page.url(), base + '/reboot-page/stuck');
+    assert.equal(probes, probesAtGiveUp, 'kept probing after giving up');
+    assert.deepEqual(errors,[]);
+    console.log('ok - after a reboot the firmware page reloads once the device has gone down and come back');
   } finally {
     if (browser) await browser.close();
     server.closeAllConnections();

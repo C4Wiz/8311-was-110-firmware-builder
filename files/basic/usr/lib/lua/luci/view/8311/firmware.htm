@@ -91,6 +91,14 @@ local can_switch = bank_available and not trial_boot
 	<form id="firmware-form" method="post" action="<%=url('admin', 'system', 'flash')%>" enctype="multipart/form-data">
 		<input type="hidden" name="token" value="<%=token%>" />
 		<input id="firmware-action" type="hidden" name="action" value="validate" />
+<% if rebooting then %>
+		<div class="recovery-feedback" id="firmware-reboot-wait" role="status" aria-live="polite"
+			data-probe="<%=resource%>/8311-theme.css" data-return="<%=url('admin', 'system', 'flash')%>"
+			data-back="<%=esc(translate('The device is back online. Reloading…'))%>"
+			data-slow="<%=esc(translate('The device has not come back yet. Check its power and connection, then reload this page.'))%>">
+			<p><%:Rebooting. This page reloads automatically when the device is back online.%></p>
+		</div>
+<% end %>
 <% if trial_boot and not rebooting then %>
 		<div class="recovery-feedback" id="firmware-trial-status" role="status">
 			<p><%:Running a trial firmware. The default bank is still%> <%=esc(committed_bank)%>.</p>

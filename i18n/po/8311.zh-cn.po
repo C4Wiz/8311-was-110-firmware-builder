@@ -1161,3 +1161,12 @@ msgstr "PON 链路运行时间"
 
 msgid "Link down"
 msgstr "链路断开"
+
+msgid "Rebooting. This page reloads automatically when the device is back online."
+msgstr "正在重启。设备恢复在线后，此页面将自动重新加载。"
+
+msgid "The device is back online. Reloading…"
+msgstr "设备已恢复在线，正在重新加载…"
+
+msgid "The device has not come back yet. Check its power and connection, then reload this page."
+msgstr "设备尚未恢复。请检查电源和连接，然后重新加载此页面。"
