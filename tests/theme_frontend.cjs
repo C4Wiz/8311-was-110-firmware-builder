@@ -292,6 +292,21 @@ function contrast(foreground, background) {
         assert(fill.fill>=fill.height && Math.abs(fill.fill-expected)<1,`memory fill width: ${JSON.stringify(fill)}`);
       }
       assert(buffered.fill<cached.fill,`small memory fills collapse: ${JSON.stringify(overviewColors.fills)}`);
+      const extras=await page.evaluate(()=>({
+        traffic:[...document.querySelectorAll('#overview-traffic .tr')].map(tr=>[...tr.children].map(td=>td.textContent)),
+        firmware:[...document.querySelectorAll('#stock-system .tr')].map(tr=>[...tr.children].map(td=>td.textContent)).find(r=>r[0]==='Firmware Version'),
+        storage:[...document.querySelectorAll('#overview-storage .cbi-progressbar')].map(bar=>bar.title),
+        connections:(b=>({title:b.title,bar:b.getBoundingClientRect().width,fill:b.firstElementChild.getBoundingClientRect().width,
+          height:b.firstElementChild.getBoundingClientRect().height}))(document.querySelector('#stock-network .cbi-progressbar'))}));
+      assert.deepEqual(extras.firmware,['Firmware Version','LEDE PTXG_CX_V0.03 r11364-ef56c85848 (v19.07.8_maxlinear) / LuCI fixture'],`${color} firmware version`);
+      // 9 of 16384 connections is 0.05%; whole-number flooring showed 0% with an empty bar.
+      assert(extras.connections.title==='9 / 16384 (0.05%)' &&
+        Math.abs(extras.connections.fill-(extras.connections.height+(extras.connections.bar-extras.connections.height)*9/16384))<1,
+        `${color} active connections bar: ${JSON.stringify(extras.connections)}`);
+      // 1.25 GB and 12.5 MB over 10 s of stick uptime are 1 Gbps down and 10 Mbps up.
+      assert.deepEqual(extras.traffic,[['Throughput (down / up)','1.00 Gbps / 10.00 Mbps'],
+        ['Total since boot (down / up)','1.16 GB / 11.92 MB'],['Frames (down / up)','1,234,567 / 89,012']],`${color} traffic panel`);
+      assert.deepEqual(extras.storage,['512.00 KB / 10.00 MB (5.00%)','1000.00 KB / 3.91 MB (25.00%)'],`${color} storage panel`);
       await page.goto(base+routes.routes);await page.waitForLoadState('networkidle');
       await page.locator('#theme-native-view[data-ready="true"]').waitFor();
       const routeColors=await page.locator('.table-titles .th, .td > .ifacebadge').evaluateAll(elements=>elements.map(element=>{

@@ -28,12 +28,15 @@ return baseclass.extend({
 		var fields = [
 			_('PON Mode'), data.pon_mode || '?',
 			_('PON PLOAM Status'), data.status || '?',
+			_('PON Link Uptime'), data.pon_link_seconds != null ? '%t'.format(data.pon_link_seconds) : (data.status ? _('Link down') : '?'),
 			_('RX Power / TX Power / TX Bias'), data.power || '?',
 			_('CPU0 / CPU1 / Optic Temperature'), data.temperature || '?',
 			_('Module Voltage'), data.voltage || '?',
 			_('Module Info'), data.module_info || '?',
 			_('ETH Speed'), data.eth_speed || '?',
-			_('Active Firmware'), data.active_bank || '?'
+			_('VLAN Status'), data.vlan_summary || '?',
+			_('Active Firmware'), data.active_bank || '?',
+			_('Inactive Firmware'), data.inactive_bank || '?'
 		];
 
 		var table = E('div', { 'class': 'table' });

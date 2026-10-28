@@ -1,5 +1,6 @@
 'use strict';
-// Stock LuCI 19.07 system panel (Apache-2.0), minus Local Time: the stick has no NTP by default.
+// Stock LuCI 19.07 system panel (Apache-2.0), minus Local Time (the stick has no NTP by default),
+// and with the build revision (e.g. v19.07.8_maxlinear) added to Firmware Version.
 'require baseclass';
 'require fs';
 'require rpc';
@@ -40,7 +41,8 @@ return baseclass.extend({
 			_('Hostname'),         boardinfo.hostname,
 			_('Model'),            boardinfo.model,
 			_('Architecture'),     boardinfo.system,
-			_('Firmware Version'), (L.isObject(boardinfo.release) ? boardinfo.release.description + ' / ' : '') + (luciversion || ''),
+			_('Firmware Version'), (L.isObject(boardinfo.release) ? boardinfo.release.description +
+				(boardinfo.release.revision ? ' (%s)'.format(boardinfo.release.revision) : '') + ' / ' : '') + (luciversion || ''),
 			_('Kernel Version'),   boardinfo.kernel,
 			_('Uptime'),           systeminfo.uptime ? '%t'.format(systeminfo.uptime) : null,
 			_('CPU Load (1, 5, 15 min)'), Array.isArray(systeminfo.load) ? '%.2f, %.2f, %.2f'.format(

@@ -21,11 +21,22 @@ async function renderNativeStatus(name) {
       getI18n: () => 'Static address', getIP6Prefix: () => null, getGatewayAddr: () => '192.0.2.254', getGateway6Addr: () => null };
     target.append(
       E('div', { class: 'cbi-section', id: 'stock-system' }, [E('h3', system.title), system.render([
-        { hostname: 'WAS-110', model: 'WAS-110', system: 'MIPS', kernel: '4.4', release: { description: 'Fixture firmware' } },
+        { hostname: 'WAS-110', model: 'WAS-110', system: 'MIPS', kernel: '4.4', release: { description: 'LEDE PTXG_CX_V0.03 r11364-ef56c85848', revision: 'v19.07.8_maxlinear' } },
         { localtime: 1791100800, uptime: 12000, load: [1200, 1000, 800] }, ['luciname = "LuCI"', 'luciversion = "fixture"']])]),
       E('div', { class: 'cbi-section', id: 'stock-memory' }, [E('h3', memory.title), memory.render({
         memory: { total: 268435456, free: 104857600, available: 115343360, buffered: 5242880, cached: 20971520 }, swap: {} })]),
       E('div', { class: 'cbi-section', id: 'stock-network' }, [E('h3', network.title), network.render([9, 16384, [iface], []])])
+    );
+    // 8311 overview panels, rendered from fixed samples instead of polling the stick.
+    const traffic = await stock('include/28_traffic');
+    traffic.render({ available: true, uptime: 100, rx_bytes: '0', tx_bytes: '0', rx_frames: '0', tx_frames: '0' });
+    const storage = await stock('include/25_storage');
+    target.append(
+      E('div', { class: 'cbi-section', id: 'overview-traffic' }, [E('h3', traffic.title), traffic.render({ available: true,
+        uptime: 110, rx_bytes: '1250000000', tx_bytes: '12500000', rx_frames: '1234567', tx_frames: '89012' })]),
+      E('div', { class: 'cbi-section', id: 'overview-storage' }, [E('h3', storage.title), storage.render({ filesystems: [
+        { mount: '/overlay', total: 10485760, used: 524288, available: 9961472 },
+        { mount: '/ptconf', total: 4096000, used: 1024000, available: 2867200 }] })])
     );
   } else {
     const routes = await stock('routes');

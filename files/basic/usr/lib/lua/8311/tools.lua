@@ -202,6 +202,80 @@ local function counter(value)
 	return value and #value <= 20 and value or nil
 end
 
+function uptime_seconds()
+	return tonumber((fs.readfile("/proc/uptime", 64) or ""):match("^(%d+%.?%d*)"))
+end
+
+-- Hardware byte and frame counters summed over every GEM port, plus the uptime they were
+-- read at, so the browser can turn two samples into a rate without trusting its own clock.
+-- Interface counters (eth0_0) only see CPU traffic; forwarded traffic never reaches them.
+function pon_traffic()
+	local output = util.exec("timeout -k 1 2 pon gem_all_counters_get")
+	local result = { uptime = uptime_seconds(), available = output:match("errorcode=0%f[^%d]") ~= nil }
+	if result.available then
+		for _, key in ipairs({ "tx_bytes", "rx_bytes", "tx_frames", "rx_frames" }) do
+			result[key] = counter(output:match("%f[%w_]" .. key .. "=(%d+)"))
+		end
+	end
+	return result
+end
+
+-- Writable filesystems worth watching, in display order. Missing mounts are skipped.
+local storage_mounts = { "/overlay", "/ptconf", "/tmp" }
+
+function storage_usage()
+	local mounted = {}
+	for line in (fs.readfile("/proc/mounts", 65536) or ""):gmatch("[^\n]+") do
+		local mountpoint, fstype = line:match("^%S+%s+(%S+)%s+(%S+)")
+		if mountpoint then mounted[mountpoint] = fstype end
+	end
+	local result = {}
+	for _, mountpoint in ipairs(storage_mounts) do
+		local info = mounted[mountpoint] and fs.statvfs(mountpoint)
+		local unit = info and (info.frsize ~= 0 and info.frsize or info.bsize)
+		if info and unit and info.blocks > 0 then
+			table.insert(result, { mount = mountpoint, fstype = mounted[mountpoint],
+				total = info.blocks * unit, used = (info.blocks - info.bfree) * unit, available = info.bavail * unit })
+		end
+	end
+	return result
+end
+
+-- Version of the inactive bank. Reading it mounts that bank, so the result is cached by
+-- alternate_firmware_info and failed or empty reads are retried at most every ten minutes.
+local alt_attempt = "/tmp/8311-alt-firmware.attempt"
+
+function alternate_firmware(bank)
+	local info = { bank = bank }
+	if bank ~= "A" and bank ~= "B" then return info end
+	local cached = fs.readfile("/tmp/8311-alt-firmware", 4096)
+	if not cached then
+		local now = uptime_seconds() or 0
+		local last, state = (fs.readfile(alt_attempt, 64) or ""):match("^(%d+)\t(%a+)\n$")
+		if last and now - tonumber(last) < 600 and now >= tonumber(last) then
+			info.state = state
+			return info
+		end
+		if not bank_available(bank) then
+			fs.writefile(alt_attempt, string.format("%d\tempty\n", now))
+			info.state = "empty"
+			return info
+		end
+		cached = read_command({ "/usr/bin/timeout", "-k", "1", "10", "/usr/sbin/alternate_firmware_info" }, 4096)
+		if not cached then
+			fs.writefile(alt_attempt, string.format("%d\terror\n", now))
+			info.state = "error"
+			return info
+		end
+	end
+	for key, value in cached:gmatch("([%w_]+)=([^\n]*)") do
+		local field = ({ FW_VARIANT = "variant", FW_VERSION = "version", FW_REVISION = "revision" })[key]
+		if field and value ~= "" and value ~= "unknown" then info[field] = value end
+	end
+	info.state = "ok"
+	return info
+end
+
 function link_diagnostics(include_rules)
 	local links = {}
 	for _, device in ipairs({ "eth0_0", "eth0_0_2" }) do
@@ -324,11 +398,14 @@ function module_type()
 end
 
 function metrics()
-	local ploam_status = util.exec("timeout -k 1 2 pon psg"):match("current=(%d+)")
+	local psg = util.exec("timeout -k 1 2 pon psg")
+	local ploam_status = psg:match("current=(%d+)")
 	local cpu1_temp = tonumber(fs.readfile("/sys/class/thermal/thermal_zone0/temp") or "")
 	local cpu2_temp = tonumber(fs.readfile("/sys/class/thermal/thermal_zone1/temp") or "")
 	local result = {
 		ploam_state = tonumber(ploam_status),
+		-- Seconds spent in the current PLOAM state (pon psg reports whole seconds).
+		ploam_state_seconds = ploam_status and tonumber(psg:match("time_curr=(%d+)")),
 		cpu1_tempC = cpu1_temp and cpu1_temp / 1000,
 		cpu2_tempC = cpu2_temp and cpu2_temp / 1000,
 	}

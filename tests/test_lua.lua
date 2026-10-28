@@ -1143,4 +1143,92 @@ check("backup read failures return no partial file and omitted legacy hooks rema
 	assert(s.json.success and s.files["/ptconf/8311/vlan_fixes_hook.sh"] == "# retain\n")
 end)
 
+check("overview extras: traffic, storage, VLAN age and a throttled inactive-bank read", function()
+	local s, tools, controller = setup()
+	local fsmock = package.loaded["nixio.fs"]
+	s.files["/proc/uptime"] = "1234.56 2000.00\n"
+	local util = package.loaded["luci.util"]
+	local exec = util.exec
+	local gem = "errorcode=0 tx_frames=89012 tx_fragments=1 tx_bytes=12500000 rx_frames=1234567 rx_fragments=2 rx_bytes=18446744073709551615 key_errors=0"
+	util.exec = function(command)
+		if command == "timeout -k 1 2 pon gem_all_counters_get" then table.insert(s.calls, command); return gem end
+		return exec(command)
+	end
+	controller.action_traffic_status()
+	assert(s.json.uptime == 1234.56 and s.json.available)
+	assert(s.json.rx_bytes == "18446744073709551615" and s.json.tx_bytes == "12500000", "64-bit counters stay exact strings")
+	assert(s.json.rx_frames == "1234567" and s.json.tx_frames == "89012" and s.json.key_errors == nil)
+	assert(s.headers["Cache-Control"] == "no-store")
+	gem = "errorcode=-1"
+	controller.action_traffic_status()
+	assert(s.json.available == false and s.json.rx_bytes == nil)
+	gem = ""
+	controller.action_traffic_status()
+	assert(s.json.available == false, "a missing pon tool is unavailable, not zero traffic")
+	util.exec = exec
+
+	s.files["/proc/mounts"] = "ubi0:ptconf /ptconf ubifs rw,sync 0 0\ntmpfs /tmp tmpfs rw 0 0\n/dev/root /rom squashfs ro 0 0\n"
+	fsmock.statvfs = function(path)
+		if path == "/ptconf" then return { frsize = 4096, bsize = 4096, blocks = 1000, bfree = 750, bavail = 700 } end
+		if path == "/tmp" then return { frsize = 0, bsize = 4096, blocks = 100, bfree = 100, bavail = 100 } end
+	end
+	controller.action_storage_status()
+	local fsl = s.json.filesystems
+	assert(#fsl == 2 and fsl[1].mount == "/ptconf" and fsl[2].mount == "/tmp", "only mounted, listed filesystems appear in order")
+	assert(fsl[1].total == 4096000 and fsl[1].used == 1024000 and fsl[1].available == 2867200)
+	assert(fsl[2].total == 409600 and fsl[2].used == 0, "frsize 0 falls back to bsize")
+	fsmock.statvfs = nil
+
+	-- VLAN age uses the daemon's own clock for both ends.
+	s.files["/proc/1/cmdline"] = "/bin/sh\0/usr/sbin/8311-vlansd.sh\0"
+	local applied = os.time() - 600
+	s.files["/tmp/8311-vlans.status"] = string.format("1\t%d\t%d\t1\tapplied\tnone\t0\n", applied, applied)
+	s.files["/proc/cmdline"] = "rootfsname=rootfsA"
+	s.process_output = "FW_VARIANT=basic\nFW_VERSION=v2.8.3\nFW_REVISION=abc1234\n"
+	controller.action_gpon_status()
+	assert(s.json.vlan_summary == "Applied 10 min ago", "VLAN summary: " .. tostring(s.json.vlan_summary))
+	assert(s.json.inactive_bank == "Firmware Bank B, v2.8.3 (abc1234)", "inactive: " .. tostring(s.json.inactive_bank))
+	assert(s.bank_checks == 1)
+
+	-- A cached read is reused without checking or mounting the bank again.
+	s.files["/tmp/8311-alt-firmware"] = "FW_VARIANT=bfw_stock\nFW_VERSION=1.0.21\nFW_REVISION=\n"
+	controller.action_gpon_status()
+	assert(s.json.inactive_bank == "Firmware Bank B, 1.0.21" and s.bank_checks == 1)
+
+	-- An empty bank is remembered for ten minutes of uptime, then checked again.
+	s.files["/tmp/8311-alt-firmware"] = nil
+	s.bank_invalid = true
+	controller.action_gpon_status()
+	assert(s.json.inactive_bank == "Firmware Bank B, empty" and s.bank_checks == 2)
+	controller.action_gpon_status()
+	assert(s.json.inactive_bank == "Firmware Bank B, empty" and s.bank_checks == 2, "empty bank re-checked on every poll")
+	s.files["/proc/uptime"] = "1900.00 2000.00\n"
+	controller.action_gpon_status()
+	assert(s.bank_checks == 3, "empty bank never re-checked")
+
+	-- PON link uptime comes from the same pon psg call and only counts in O5.
+	s.pon = "errorcode=0 current=51 previous=40 time_curr=70212"
+	local function pon_calls()
+		local n = 0
+		for _, command in ipairs(s.calls) do if command:find("pon psg", 1, true) then n = n + 1 end end
+		return n
+	end
+	local before = pon_calls()
+	controller.action_gpon_status()
+	assert(s.json.pon_link_seconds == 70212 and pon_calls() == before + 1, "link uptime needs exactly one pon call")
+	s.pon = "errorcode=0 current=23 previous=51 time_curr=4"
+	controller.action_gpon_status()
+	assert(s.json.pon_link_seconds == nil, "a link outside O5 is not up")
+	s.pon = ""
+	controller.action_gpon_status()
+	assert(s.json.pon_link_seconds == nil)
+
+	-- A failed read (for example while an install holds the lock) reports unreadable.
+	s.bank_invalid = false
+	s.files["/proc/uptime"] = "3000.00 2000.00\n"
+	s.process_code = 1
+	controller.action_gpon_status()
+	assert(s.json.inactive_bank == "Firmware Bank B, unreadable", "failed: " .. tostring(s.json.inactive_bank))
+end)
+
 print(string.format("%d Lua regression groups passed", passed))

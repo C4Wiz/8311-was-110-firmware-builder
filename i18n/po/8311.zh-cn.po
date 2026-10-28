@@ -1101,3 +1101,63 @@ msgstr "%s Mbps"
 
 msgid "CPU Load (1, 5, 15 min)"
 msgstr "CPU 负载（1、5、15 分钟）"
+
+msgid "VLAN Status"
+msgstr "VLAN 状态"
+
+msgid "empty"
+msgstr "空"
+
+msgid "unreadable"
+msgstr "无法读取"
+
+msgid "unknown version"
+msgstr "未知版本"
+
+msgid "Applied %s"
+msgstr "已应用（%s）"
+
+msgid "just now"
+msgstr "刚刚"
+
+msgid "%d min ago"
+msgstr "%d 分钟前"
+
+msgid "%d h ago"
+msgstr "%d 小时前"
+
+msgid "%d days ago"
+msgstr "%d 天前"
+
+msgid "Throughput (down / up)"
+msgstr "吞吐量（下行 / 上行）"
+
+msgid "Total since boot (down / up)"
+msgstr "开机以来总流量（下行 / 上行）"
+
+msgid "Frames (down / up)"
+msgstr "帧数（下行 / 上行）"
+
+msgid "Measuring…"
+msgstr "测量中…"
+
+msgid "PON counters unavailable"
+msgstr "无法读取 PON 计数器"
+
+msgid "Storage"
+msgstr "存储"
+
+msgid "Settings & packages (/overlay)"
+msgstr "设置与软件包（/overlay）"
+
+msgid "PON configuration (/ptconf)"
+msgstr "PON 配置（/ptconf）"
+
+msgid "Temporary, in RAM (/tmp)"
+msgstr "临时，位于内存（/tmp）"
+
+msgid "PON Link Uptime"
+msgstr "PON 链路运行时间"
+
+msgid "Link down"
+msgstr "链路断开"

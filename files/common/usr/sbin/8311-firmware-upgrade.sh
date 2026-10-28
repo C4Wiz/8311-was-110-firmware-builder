@@ -302,7 +302,7 @@ LOCK="/tmp/8311-firmware-upgrade.lock"
 		fi
 
 		fwenv_set "img_valid$INSTALL_BANK" false || _err "Cannot mark the target bank incomplete."
-		rm -f /tmp/8311-alt-firmware
+		rm -f /tmp/8311-alt-firmware /tmp/8311-alt-firmware.attempt
 		install_image "kernel.bin" "Kernel" "kernel$INSTALL_BANK" "$SIZE_KERNEL" "$SHA256_KERNEL" "$KERNEL_UBI"
 		install_image "bootcore.bin" "Bootcore" "bootcore$INSTALL_BANK" "$SIZE_BOOTCORE" "$SHA256_BOOTCORE" "$BOOTCORE_UBI"
 		install_image "rootfs.img" "RootFS" "rootfs$INSTALL_BANK" "$SIZE_ROOTFS" "$SHA256_ROOTFS" "$ROOTFS_UBI"

@@ -46,6 +46,8 @@ function index()
 	entry({"admin", "8311", "pontop"}, call("action_pontop")).leaf=true
 	entry({"admin", "8311", "pon_dump"}, call("action_pon_dump")).leaf=true
 	entry({"admin", "8311", "gpon_status"}, call("action_gpon_status")).leaf = true
+	entry({"admin", "8311", "traffic_status"}, call("action_traffic_status")).leaf = true
+	entry({"admin", "8311", "storage_status"}, call("action_storage_status")).leaf = true
 	entry({"admin", "8311", "diagnostics"}, call("action_diagnostics")).leaf = true
 	entry({"admin", "8311", "vlans", "extvlans"}, call("action_vlan_extvlans"))
 	entry({"admin", "8311", "support", "support.tar.gz"}, call("action_support_download"))
@@ -777,6 +779,35 @@ local function link_speed(mbps)
 	return string.format(translate("%s Mbps"), string.format("%g", mbps))
 end
 
+local function format_age(seconds)
+	if seconds < 60 then return translate("just now") end
+	if seconds < 3600 then return string.format(translate("%d min ago"), math.floor(seconds / 60)) end
+	if seconds < 86400 then return string.format(translate("%d h ago"), math.floor(seconds / 3600)) end
+	return string.format(translate("%d days ago"), math.floor(seconds / 86400))
+end
+
+-- One line for the overview: the monitor's message, plus how long ago rules were last applied.
+-- Both timestamps come from the same (possibly unset) wall clock, so their difference is reliable.
+local function vlan_summary(vlan)
+	local text = vlan.message
+	if vlan.state == "applied" and vlan.last_applied_at > 0 and vlan.observed_at then
+		local age = os.time() - vlan.last_applied_at
+		if age >= 0 then text = string.format(translate("Applied %s"), format_age(age)) end
+	end
+	return text
+end
+
+local function inactive_firmware(active)
+	local bank = active == "A" and "B" or (active == "B" and "A" or nil)
+	if not bank then return translate("N/A") end
+	local info = tools.alternate_firmware(bank)
+	local label = string.format(translate("Firmware Bank %s"), bank)
+	if info.state == "empty" then return label .. ", " .. translate("empty") end
+	if info.state ~= "ok" then return label .. ", " .. translate("unreadable") end
+	if not info.version then return label .. ", " .. translate("unknown version") end
+	return label .. ", " .. info.version .. (info.revision and (" (" .. info.revision .. ")") or "")
+end
+
 local function pon_status_values()
 	local metrics = tools.metrics()
 
@@ -795,9 +826,13 @@ local function pon_status_values()
 	local bank = tools.active_bank()
 	local firmware = string.format("%s (%s)", version.version or "?", version.revision or "?")
 	if bank then firmware = string.format(translate("Firmware Bank %s"), bank) .. ", " .. firmware end
+	local vlan = vlan_status_values()
 
 	local rv = {
 		status = pon_state(metrics.ploam_state),
+		-- Only O5 (operation) counts as the link being up.
+		pon_link_seconds = metrics.ploam_state and metrics.ploam_state >= 50 and metrics.ploam_state < 60
+			and metrics.ploam_state_seconds or nil,
 		power = measurement(metrics.rx_power_dBm, "%.2f dBm") .. " / " .. measurement(metrics.tx_power_dBm, "%.2f dBm") .. " / " .. measurement(metrics.tx_bias_mA, "%.2f mA"),
 		temperature = string.format("%s / %s / %s", temperature(metrics.cpu1_tempC), temperature(metrics.cpu2_tempC), temperature(metrics.optic_tempC)),
 		voltage = measurement(metrics.module_voltage, "%.2f V"),
@@ -806,6 +841,8 @@ local function pon_status_values()
 		module_info = string.format("%s %s %s (%s)", vendor_name, vendor_pn, vendor_rev, module_type),
 		eth_speed = link_speed(eth_speed),
 		active_bank = firmware,
+		inactive_bank = inactive_firmware(bank),
+		vlan_summary = vlan_summary(vlan),
 	}
 	return rv
 end
@@ -813,6 +850,18 @@ end
 function action_gpon_status()
 	http.prepare_content("application/json")
 	http.write_json(pon_status_values())
+end
+
+function action_traffic_status()
+	http.header("Cache-Control", "no-store")
+	http.prepare_content("application/json")
+	http.write_json(tools.pon_traffic())
+end
+
+function action_storage_status()
+	http.header("Cache-Control", "no-store")
+	http.prepare_content("application/json")
+	http.write_json({ filesystems = tools.storage_usage() })
 end
 
 function action_diagnostics()
@@ -1330,6 +1379,7 @@ local function apply_firmware(action, values, path, bank)
 	local installed = installing and result and result.code == 0
 	if installed then
 		fs.remove("/tmp/8311-alt-firmware")
+		fs.remove("/tmp/8311-alt-firmware.attempt")
 		fs.remove(path)
 	elseif not installing and (not result or result.code ~= 0) then
 		fs.remove(path)
