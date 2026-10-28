@@ -171,7 +171,7 @@ const server = http.createServer(async (req, res) => {
   } else if (url.pathname.endsWith('/diagnostics')) {
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify({ status: 'O5', power: '-19.2 dBm / 2.1 dBm / 12 mA', temperature: '42 / 43 / 40 °C',
-      eth_speed: '10000 Mbps', vlan_message: 'Fixture rules applied', links: [{device:'eth0_0',available:true,
+      eth_speed: '10 Gbps', vlan_message: 'Fixture rules applied', links: [{device:'eth0_0',available:true,
         counters:{rx_packets:'18446744073709551615',tx_packets:'18023',rx_dropped:'0',tx_dropped:'0',rx_errors:'0',tx_errors:'0'}, filters:[]}] }));
   } else if (url.pathname.includes('/pontop/')) { res.end('Fixture PON state: O5\nNo live device reads.');
   } else {
@@ -275,10 +275,23 @@ function contrast(foreground, background) {
         const bar=document.querySelector('#stock-memory .cbi-progressbar');
         return {pairs:[pair(document.querySelector('.ifacebox-head strong')),pair(document.querySelector('.ifacebox-body > span')),
           pair(document.querySelector('.ifacebox-body .ifacebadge')),pair(bar,'::after')],
-          gap:bar.getBoundingClientRect().height-parseFloat(getComputedStyle(bar,'::after').height)-bar.firstElementChild.getBoundingClientRect().height};
+          gap:bar.getBoundingClientRect().height-parseFloat(getComputedStyle(bar,'::after').height)-bar.firstElementChild.getBoundingClientRect().height,
+          fills:[...document.querySelectorAll('#stock-memory .cbi-progressbar')].map(b=>({title:b.title,
+            bar:b.getBoundingClientRect().width,fill:b.firstElementChild.getBoundingClientRect().width,
+            height:b.firstElementChild.getBoundingClientRect().height}))};
       });
       for(const pair of overviewColors.pairs) assert(contrast(pair.text,pair.background)>=4.5,`${color} stock overview contrast: ${JSON.stringify(pair)}`);
       assert(overviewColors.gap>=2,'native progress labels overlap the fill');
+      // 5 MiB of 256 MiB is 1.95%; whole-number flooring showed 1% and drew a 1% bar.
+      const [, , buffered, cached]=overviewColors.fills;
+      assert(buffered.title.endsWith('(1.95%)'),`memory percentage: ${JSON.stringify(buffered)}`);
+      // Fills start as a round dot and add their share of the rest of the track, so small values stay
+      // rounded and still differ: buffered (1.95%) must be shorter than cached (7.81%).
+      for(const fill of overviewColors.fills) {
+        const expected=fill.height+(fill.bar-fill.height)*parseFloat(fill.title.match(/\(([\d.]+)%\)/)[1])/100;
+        assert(fill.fill>=fill.height && Math.abs(fill.fill-expected)<1,`memory fill width: ${JSON.stringify(fill)}`);
+      }
+      assert(buffered.fill<cached.fill,`small memory fills collapse: ${JSON.stringify(overviewColors.fills)}`);
       await page.goto(base+routes.routes);await page.waitForLoadState('networkidle');
       await page.locator('#theme-native-view[data-ready="true"]').waitFor();
       const routeColors=await page.locator('.table-titles .th, .td > .ifacebadge').evaluateAll(elements=>elements.map(element=>{

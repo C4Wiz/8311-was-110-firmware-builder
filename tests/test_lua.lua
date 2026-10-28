@@ -384,14 +384,22 @@ check("status reuses the module cache and parses only a complete boot-bank argum
 	s.files["/proc/cmdline"] = "console=ttyS0 rootfsname=rootfsB quiet\n"
 	s.files["/sys/class/pon_mbox/pon_mbox0/device/eeprom50"] = string.rep("x", 256)
 	controller.action_gpon_status()
-	assert(s.json.active_bank == "B" and s.json.module_info:match("%(bfw%)$"))
+	assert(s.json.active_bank == "Firmware Bank B, test (test)" and s.json.module_info:match("%(bfw%)$"))
 	assert(#s.calls == 1, "status spawned a shell to read static information")
 	for _, read in ipairs(s.reads) do
 		if read.path:match("eeprom50$") then assert(read.length == 60) end
 	end
 	s.files["/proc/cmdline"] = "rootfsname=rootfsBAD"
 	controller.action_gpon_status()
-	assert(s.json.active_bank == "N/A")
+	assert(s.json.active_bank == "test (test)", "an unknown bank must not be shown as a bank")
+	for speed, text in pairs({ ["10000"] = "10 Gbps", ["2500"] = "2.5 Gbps", ["1000"] = "1 Gbps", ["100"] = "100 Mbps", ["-1"] = "N/A" }) do
+		s.files["/sys/class/net/eth0_0/speed"] = speed .. "\n"
+		controller.action_gpon_status()
+		assert(s.json.eth_speed == text, speed .. " Mbps rendered as " .. tostring(s.json.eth_speed))
+	end
+	s.files["/sys/class/net/eth0_0/speed"] = nil
+	controller.action_gpon_status()
+	assert(s.json.eth_speed == "N/A")
 end)
 
 check("signed optical temperature, real zero CPU temperature and finite power", function()

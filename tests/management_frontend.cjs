@@ -39,7 +39,7 @@ const submissions = [];
 const diagnosticOptions = [];
 const textReads = [];
 const data = {
-  status:'Fixture PON', power:'-19 dBm', temperature:'42 C', eth_speed:'10000 Mbps', vlan_message:'Rules checked',
+  status:'Fixture PON', power:'-19 dBm', temperature:'42 C', eth_speed:'10 Gbps', vlan_message:'Rules checked',
   links:[{ device:'eth0_0', available:true, rules_available:true,
     counters:{rx_packets:'18446744073709551615',tx_packets:'0',rx_dropped:'0',tx_dropped:'0',rx_errors:'0',tx_errors:'0'},
     filters:[{direction:'ingress',protocol:'all',pref:2,action:'<img src=x onerror="window.injected=true">',packets:'0',dropped:'0'}] },

@@ -1089,3 +1089,15 @@ msgstr "维护者"
 
 msgid "Credits and licenses"
 msgstr "版权与致谢"
+
+msgid "Firmware Bank %s"
+msgstr "固件分区 %s"
+
+msgid "%s Gbps"
+msgstr "%s Gbps"
+
+msgid "%s Mbps"
+msgstr "%s Mbps"
+
+msgid "CPU Load (1, 5, 15 min)"
+msgstr "CPU 负载（1、5、15 分钟）"

@@ -51,7 +51,7 @@
 	--destructive: #ff8c00;
 	--destructive-text: #251b0d;
 	--progress: #483d8b;
-	--progress-track: #282a2c;
+	--progress-track: rgba(255,255,255,.05);
 	--badge: #483d8b;
 	--badge-text: #fff;
 }

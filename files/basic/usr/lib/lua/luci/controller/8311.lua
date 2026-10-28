@@ -770,6 +770,13 @@ local function measurement(value, format)
 	return tools.is_finite(value) and string.format(translate(format), value) or translate("N/A")
 end
 
+-- 10000 -> "10 Gbps", 2500 -> "2.5 Gbps", 100 -> "100 Mbps"; down links report -1 or nothing.
+local function link_speed(mbps)
+	if not mbps or mbps <= 0 then return translate("N/A") end
+	if mbps >= 1000 then return string.format(translate("%s Gbps"), string.format("%g", mbps / 1000)) end
+	return string.format(translate("%s Mbps"), string.format("%g", mbps))
+end
+
 local function pon_status_values()
 	local metrics = tools.metrics()
 
@@ -784,7 +791,10 @@ local function pon_status_values()
 	local vendor_rev = eeprom_text(57, 60)
 	local pon_mode = uci:get("gpon", "ponip", "pon_mode") or "xgspon"
 	local module_type = tools.module_type() or translate("N/A")
-	local active_bank = tools.active_bank() or translate("N/A")
+	local version = require "8311.version"
+	local bank = tools.active_bank()
+	local firmware = string.format("%s (%s)", version.version or "?", version.revision or "?")
+	if bank then firmware = string.format(translate("Firmware Bank %s"), bank) .. ", " .. firmware end
 
 	local rv = {
 		status = pon_state(metrics.ploam_state),
@@ -794,8 +804,8 @@ local function pon_status_values()
 		sample_valid = metrics.sample_valid,
 		pon_mode = pon_mode:upper():gsub("PON$", "-PON"),
 		module_info = string.format("%s %s %s (%s)", vendor_name, vendor_pn, vendor_rev, module_type),
-		eth_speed = (eth_speed and string.format(translate("%s Mbps"), eth_speed) or translate("N/A")),
-		active_bank = active_bank,
+		eth_speed = link_speed(eth_speed),
+		active_bank = firmware,
 	}
 	return rv
 end
