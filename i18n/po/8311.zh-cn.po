@@ -93,8 +93,8 @@ msgstr "模块电压"
 msgid "Module Info"
 msgstr "模块信息"
 
-msgid "ETH Speed"
-msgstr "ETH速率"
+msgid "SFP+ Link Speed"
+msgstr "SFP+ 链路速率"
 
 msgid "PON Status"
 msgstr "PON状态"

@@ -90,8 +90,8 @@ msgstr "Tension du module"
 msgid "Module Info"
 msgstr "Informations du module"
 
-msgid "ETH Speed"
-msgstr "Vitesse ETH"
+msgid "SFP+ Link Speed"
+msgstr "Vitesse du lien SFP+"
 
 msgid "PON Status"
 msgstr "Statut PON"

@@ -92,8 +92,8 @@ msgstr "モジュール電圧"
 msgid "Module Info"
 msgstr "モジュール情報"
 
-msgid "ETH Speed"
-msgstr "ETHスピード"
+msgid "SFP+ Link Speed"
+msgstr "SFP+ リンク速度"
 
 msgid "PON Status"
 msgstr "PON状態"

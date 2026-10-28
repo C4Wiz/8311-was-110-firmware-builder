@@ -33,7 +33,7 @@ return baseclass.extend({
 			_('CPU0 / CPU1 / Optic Temperature'), data.temperature || '?',
 			_('Module Voltage'), data.voltage || '?',
 			_('Module Info'), data.module_info || '?',
-			_('ETH Speed'), data.eth_speed || '?',
+			_('SFP+ Link Speed'), data.eth_speed || '?',
 			_('VLAN Status'), data.vlan_summary || '?',
 			_('Active Firmware'), data.active_bank || '?',
 			_('Inactive Firmware'), data.inactive_bank || '?'
