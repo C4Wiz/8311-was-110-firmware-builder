@@ -29,7 +29,6 @@ The default management address is `192.168.11.1`, user `root`, and there's no pa
 you set one.
 
 ---
-
 ## See release page for changes
 
 ## From linlunaire's fork (translated from Chinese)
