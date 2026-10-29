@@ -31,46 +31,7 @@ you set one.
 
 ---
 
-## What's new in this fork
-
-### Status page
-- **New rows in the PON Status panel**
-  - **PON Link Uptime:** how long the fiber link has been operational (O5). It reads
-    "Link down" otherwise. It reuses the existing `pon psg` call, so it costs nothing extra.
-  - **VLAN Status:** the VLAN monitor's state, e.g. "Applied 12 min ago".
-  - **Inactive Firmware:** the other bank's version, e.g.
-    `Firmware Bank A, v2.8.3 (abc1234)`, or `empty`. It's read once and cached, an empty or
-    unreadable bank is re-checked at most every 10 minutes, and installing firmware clears
-    the cache.
-- **New Traffic panel:** throughput, total since boot, and frames, down and up, read from the
-  PON chip's hardware GEM counters. `eth0_0` interface statistics only count traffic that
-  reaches the CPU, so they can't measure forwarded data. Throughput is timed with the stick's
-  own uptime, so a missing NTP clock doesn't affect it.
-- **New Storage panel:** usage of `/overlay` (settings and packages) and `/ptconf` (PON
-  configuration).
-- **Panel order:** System, PON Status, Memory, Storage, Traffic, Network.
-- **Exact percentages and rounded bars**
-  - Memory and Active Connections show two decimals, e.g. Buffered `0.53%`. The stock panels
-    rounded down to whole numbers, so they showed `0%` with an empty bar.
-  - Small values draw as a round dot that still grows in proportion, and 100% fills the bar
-    exactly.
-- **Readable bars in dark mode:** the empty part of each bar was nearly invisible on
-  alternating rows and is now visible on every row.
-- **Clearer labels and values**
-  - **SFP+ Link Speed** (was "ETH Speed") reads `10 Gbps` / `2.5 Gbps` / `100 Mbps`
-    instead of `10000 Mbps`.
-  - **Active Firmware** reads `Firmware Bank B, v2.8.3.x (commit)` instead of just `B`.
-  - **CPU Load (1, 5, 15 min)** replaces "Load Average".
-  - **Firmware Version** now includes the build revision, e.g. `(v19.07.8_maxlinear)`.
-  - **Local Time** is removed: the stick has no NTP by default, so the clock is wrong.
-
-### Firmware page
-- **Automatic reload after reboot:** after Reboot, Trial boot, Install and trial boot, or
-  Reboot to previous default, the page waits for the stick to go down and come back, then
-  reloads itself.
-  - If an outage is missed between checks, it reloads anyway after 90 s.
-  - After 5 minutes without a response, it asks you to check power and connection.
-  - The reload only starts working from the reboot after you're running this firmware.
+## See release page for changes
 
 ---
 
