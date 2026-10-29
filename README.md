@@ -33,8 +33,6 @@ you set one.
 
 ## See release page for changes
 
----
-
 ## From linlunaire's fork (translated from Chinese)
 
 ### Safer A/B firmware upgrades
