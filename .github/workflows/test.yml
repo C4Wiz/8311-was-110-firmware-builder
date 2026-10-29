@@ -85,11 +85,69 @@ jobs:
           curl --fail --location --retry 3 --output stock/upstream-v2.8.3.7z https://github.com/djGrrr/8311-was-110-firmware-builder/releases/download/v2.8.3/WAS-110_8311_firmware_mod_v2.8.3_basic.7z
           echo '5d72e7552e396127b59a548c6163113d088d545708aecb0fed38097b862288f8  stock/upstream-v2.8.3.7z' | sha256sum --check
           7z x -so stock/upstream-v2.8.3.7z local-upgrade.tar > stock/upstream-v2.8.3-local-upgrade.tar
+      - name: Choose the firmware version
+        id: version
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          # A tag names the release (v2.8.3-dave1); branch builds keep the builder's default.
+          if [ "$REF_TYPE" = tag ]; then
+            if ! printf '%s' "$REF_NAME" | grep -Eq '^[A-Za-z0-9][A-Za-z0-9.+-]{0,14}$'; then
+              echo "::error::Tag '$REF_NAME' is not a valid firmware version: use 1-15 letters, digits, dots, pluses or hyphens, starting with a letter or digit."
+              exit 1
+            fi
+            echo "args=--version $REF_NAME" >> "$GITHUB_OUTPUT"
+            echo "name=$REF_NAME" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          fi
       - name: Build and verify every rootfs file, mode and symlink
-        run: sudo --preserve-env=GITHUB_SERVER_URL,GITHUB_REPOSITORY,GITHUB_RUN_ID python3 tools/build_from_release.py --base stock/upstream-v2.8.3-local-upgrade.tar --output out/release
+        run: sudo --preserve-env=GITHUB_SERVER_URL,GITHUB_REPOSITORY,GITHUB_RUN_ID python3 tools/build_from_release.py --base stock/upstream-v2.8.3-local-upgrade.tar --output out/release ${{ steps.version.outputs.args }}
       - uses: actions/upload-artifact@v4
         with:
-          name: WAS110-basic-${{ github.sha }}
+          name: WAS110-basic-${{ steps.version.outputs.name }}
           path: out/release/
           if-no-files-found: error
           retention-days: 30
+
+  release:
+    name: Publish GitHub release
+    needs: firmware
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: WAS110-basic-${{ github.ref_name }}
+          path: release
+      - name: Verify checksums
+        run: cd release && sha256sum --check SHA256SUMS
+      - name: Package like the upstream releases
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          sudo apt-get update && sudo apt-get install -y p7zip-full
+          archive="WAS-110_8311_firmware_mod_${TAG}_basic.7z"
+          (cd release && 7z a -bd "../$archive" .)
+          sha256sum "$archive" > "$archive.sha256"
+          echo "ARCHIVE=$archive" >> "$GITHUB_ENV"
+      - name: Create or update the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          files=("$ARCHIVE" "$ARCHIVE.sha256" release/local-upgrade.tar release/SHA256SUMS release/build-manifest.json)
+          notes="Basic firmware for the WAS-110, built from ${TAG} ($(echo "$GITHUB_SHA" | cut -c1-7)).
+
+          Flash \`local-upgrade.tar\` from System > Backup / Flash Firmware, after downloading a configuration backup. Check it against \`SHA256SUMS\` first. The .7z holds the same files as the build artifact."
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            # Re-running the workflow replaces the files of an existing release.
+            gh release upload "$TAG" "${files[@]}" --clobber
+          else
+            gh release create "$TAG" "${files[@]}" --verify-tag --title "$TAG" --notes "$notes"
+          fi
