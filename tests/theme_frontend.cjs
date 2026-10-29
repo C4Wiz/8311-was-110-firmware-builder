@@ -121,9 +121,9 @@ ${appearanceInit()}
 <script defer src="/luci-static/resources/8311-theme.js"></script><script src="/luci-static/resources/cbi.js"></script></head>
 <body class="luci-8311 ${anonymous ? 'luci-login' : 'luci-authenticated'}" data-page="${dispatchpath.join('-')}"><header><div class="fill"><div class="container">
 ${anonymous ? '' : '<button id="8311-menu-toggle" type="button" aria-expanded="false" aria-controls="8311-navigation">Menu</button>'}
-<a class="brand" href="/cgi-bin/luci/admin">8311<span>linlunaire</span></a><div class="theme-controls"><div id="indicators"></div>
+<a class="brand" href="/cgi-bin/luci/admin">8311<span>C4Wiz</span></a><div class="theme-controls"><div id="indicators"></div>
 ${appearance()}</div>
-${anonymous ? '' : '<nav id="8311-navigation"><a class="brand sidebar-brand" href="/cgi-bin/luci/admin">8311<span>linlunaire</span></a><ul id="topmenu" class="nav" style="display:none"></ul></nav><button id="8311-menu-backdrop" type="button" hidden>Close</button>'}
+${anonymous ? '' : '<nav id="8311-navigation"><a class="brand sidebar-brand" href="/cgi-bin/luci/admin">8311<span>C4Wiz</span></a><ul id="topmenu" class="nav" style="display:none"></ul></nav><button id="8311-menu-backdrop" type="button" hidden>Close</button>'}
 </div></div></header><div id="maincontent" class="container"><div id="tabmenu" style="display:none"></div>
 <script src="/luci-static/resources/luci.js"></script><script>L=new LuCI(${JSON.stringify({
   token: 'fixture-token', media: '/luci-static/bootstrap', resource: '/luci-static/resources', scriptname: '/cgi-bin/luci',
@@ -208,7 +208,7 @@ function contrast(foreground, background) {
     await page.locator('#topmenu a[aria-current="page"]').waitFor();
     assert.equal(await page.locator('#topmenu a[aria-current="page"]').getAttribute('href'),routes.config);
     assert.equal(await page.locator('.sidebar-brand').evaluate(brand=>brand.firstChild.textContent.trim()),'8311');
-    assert.equal(await page.locator('.sidebar-brand span').innerText(),'linlunaire');
+    assert.equal(await page.locator('.sidebar-brand span').innerText(),'C4Wiz');
     // Menu rendering can finish before the luci-loaded UCI changes request.
     await page.waitForFunction(()=>window.L && L.ui && L.ui.changes.changes != null);
     await page.waitForLoadState('networkidle');
@@ -333,7 +333,7 @@ function contrast(foreground, background) {
       for (const name of Object.keys(routes)) {
         await page.goto(base+routes[name]);await page.waitForLoadState('networkidle');
         if(['overview','routes'].includes(name)) await page.locator('#theme-native-view[data-ready="true"]').waitFor();
-        assert.match(await page.locator('footer').innerText(), /linlunaire/);
+        assert.match(await page.locator('footer').innerText(), /C4Wiz/);
         assert(!await page.locator('footer a[href*="djGrrr"], footer a[href*="missing233"], footer img').count());
         assert.equal(await page.locator('footer a[href$="8311-notices.html"]').count(), 1);
         for (const width of [320,390,760,761,1280]) {
@@ -401,7 +401,7 @@ function contrast(foreground, background) {
     assert(notices.ok());
     assert.match(notices.headers()['content-type'], /^text\/html/);
     const noticeText = await notices.text();
-    for(const name of ['linlunaire','djGrrr','Missing','Apache License','Jerry']) assert(noticeText.includes(name), 'missing credit: '+name);
+    for(const name of ['C4Wiz','linlunaire','djGrrr','Missing','Apache License','Jerry']) assert(noticeText.includes(name), 'missing credit: '+name);
     console.log('ok - personal footer links retain upstream credits and the full license');
 
     await page.goto(base+routes.config);await page.waitForLoadState('networkidle');

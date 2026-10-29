@@ -4,6 +4,7 @@
  Copyright 2012 David Menting <david@nut-bolt.nl>
  Licensed to the public under the Apache License 2.0.
  Modified by linlunaire: lightweight Argon-style layout and appearance controls.
+ Modified by C4Wiz: C4Wiz firmware branding.
 -%>
 
 <%
@@ -48,7 +49,7 @@
 					<% if authenticated then %>
 					<button id="8311-menu-toggle" type="button" aria-controls="8311-navigation" aria-expanded="false" aria-label="<%:Toggle navigation%>">☰</button>
 					<% end %>
-					<a class="brand" href="<%=url('admin')%>">8311<span>linlunaire</span></a>
+					<a class="brand" href="<%=url('admin')%>">8311<span>C4Wiz</span></a>
 					<div class="theme-controls">
 						<div id="indicators" class="pull-right"></div>
 						<div id="8311-theme-toggle" class="theme-switch" role="group" aria-label="<%:Appearance%>">
@@ -59,7 +60,7 @@
 					</div>
 					<% if authenticated then %>
 					<nav id="8311-navigation" aria-label="<%:Navigation%>">
-						<a class="brand sidebar-brand" href="<%=url('admin')%>">8311<span>linlunaire</span></a>
+						<a class="brand sidebar-brand" href="<%=url('admin')%>">8311<span>C4Wiz</span></a>
 						<ul class="nav" id="topmenu" style="display:none"></ul>
 					</nav>
 					<button id="8311-menu-backdrop" type="button" aria-label="<%:Close navigation%>" hidden></button>
