@@ -15,7 +15,6 @@ The kernel, bootcore, drivers and vendor binaries are the unchanged v2.8.3 compo
 build verifies all 270 protected binary entries against the pinned v2.8.3 base.
 
 ---
-
 ## Install or upgrade
 
 1. Go to **System → Backup / Flash Firmware** and **download a configuration backup** first.
