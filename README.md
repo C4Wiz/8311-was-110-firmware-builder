@@ -2,14 +2,12 @@
 
 Firmware for the WAS-110 / PRX126 XGS-PON SFP+ stick. It builds on the
 [8311 community firmware v2.8.3](https://github.com/djGrrr/8311-was-110-firmware-builder/releases/tag/v2.8.3)
-by djGrrr, through two layers of changes:
-
-1. **[linlunaire's fork](https://github.com/linlunaire/8311-was-110-firmware-builder)** (53 commits, 3–6 Oct 2026):
+by djGrrr:
+1. **[linlunaire's fork](https://github.com/linlunaire/8311-was-110-firmware-builder)**:
    safer A/B firmware upgrades, complete settings backup and restore, VLAN rule recovery,
    connection diagnostics, a lighter Argon-style web UI, many reliability fixes, and
    reproducible builds. Its documentation is in Chinese; the summary below is translated.
-2. **This fork:** a reworked status page, automatic reload after reboots, and tagged GitHub
-   releases.
+2. **This fork:** a reworked status page, automatic reload after reboots.
 
 The kernel, bootcore, drivers and vendor binaries are the unchanged v2.8.3 components. Every
 build verifies all 270 protected binary entries against the pinned v2.8.3 base.
